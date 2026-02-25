@@ -22,11 +22,22 @@ let initialized = false;
 const initializeFirebase = () => {
     if (initialized) return;
 
-    // Check if config has values
-    const hasConfig = firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId;
+    // Check if config has values (handle empty strings too)
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+
+    const hasConfig = apiKey && authDomain && projectId && appId &&
+        apiKey.length > 0 && authDomain.length > 0 &&
+        projectId.length > 0 && appId.length > 0;
 
     if (!hasConfig) {
-        console.warn('Firebase config is empty. Environment variables may not be loaded.');
+        console.error('Firebase config is empty. Environment variables may not be loaded in production.');
+        console.error('API Key set:', !!apiKey, apiKey ? 'value: ' + apiKey.substring(0, 10) + '...' : '');
+        console.error('Auth Domain set:', !!authDomain);
+        console.error('Project ID set:', !!projectId);
+        console.error('App ID set:', !!appId);
         // Mark as initialized to prevent repeated attempts
         initialized = true;
         return;
@@ -38,6 +49,7 @@ const initializeFirebase = () => {
         db = getFirestore(app);
         googleProvider = new GoogleAuthProvider();
         initialized = true;
+        console.log('Firebase initialized successfully');
     } catch (error) {
         console.error('Firebase initialization error:', error);
         // Mark as initialized to prevent repeated attempts even on error
