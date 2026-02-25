@@ -9,19 +9,37 @@ import Image from "next/image";
 export default function AuthWidget() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [firebaseReady, setFirebaseReady] = useState(false);
 
     useEffect(() => {
-        const auth = getFirebaseAuth();
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
+        try {
+            const auth = getFirebaseAuth();
+            if (!auth) {
+                console.warn('Firebase auth not available');
+                setLoading(false);
+                return;
+            }
+            setFirebaseReady(true);
+            const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                setUser(currentUser);
+                setLoading(false);
+            });
+            return () => unsubscribe();
+        } catch (error) {
+            console.error('Firebase auth error:', error);
             setLoading(false);
-        });
-        return () => unsubscribe();
+        }
     }, []);
 
     const handleLogout = async () => {
-        const auth = getFirebaseAuth();
-        await signOut(auth);
+        try {
+            const auth = getFirebaseAuth();
+            if (auth) {
+                await signOut(auth);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
     };
 
     if (loading) {

@@ -26,11 +26,10 @@ const initializeFirebase = () => {
     const hasConfig = firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId;
 
     if (!hasConfig) {
-        console.warn('Firebase config is empty. Environment variables may not be loaded. Using fallback...');
-        console.log('NEXT_PUBLIC_FIREBASE_API_KEY:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? 'set' : 'undefined');
-        console.log('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? 'set' : 'undefined');
-        console.log('NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'set' : 'undefined');
-        console.log('NEXT_PUBLIC_FIREBASE_APP_ID:', process.env.NEXT_PUBLIC_FIREBASE_APP_ID ? 'set' : 'undefined');
+        console.warn('Firebase config is empty. Environment variables may not be loaded.');
+        // Mark as initialized to prevent repeated attempts
+        initialized = true;
+        return;
     }
 
     try {
@@ -39,9 +38,10 @@ const initializeFirebase = () => {
         db = getFirestore(app);
         googleProvider = new GoogleAuthProvider();
         initialized = true;
-        console.log('Firebase initialized successfully');
     } catch (error) {
         console.error('Firebase initialization error:', error);
+        // Mark as initialized to prevent repeated attempts even on error
+        initialized = true;
     }
 };
 

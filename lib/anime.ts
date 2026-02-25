@@ -1,6 +1,16 @@
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc, writeBatch, orderBy } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 
+// Safe database getter that handles initialization errors
+const getDb = () => {
+  try {
+    return getFirebaseDb();
+  } catch (error) {
+    console.error('Failed to get Firebase DB:', error);
+    return null;
+  }
+};
+
 /**
  * Jikan API Anime response type
  */
@@ -150,8 +160,12 @@ export async function addToWatchList(
   animeImage: string,
   totalEpisodes: number,
   status: WatchStatus
-): Promise<WatchListEntry> {
-  const db = getFirebaseDb();
+): Promise<WatchListEntry | null> {
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return null;
+  }
   const now = new Date().toISOString();
   const entry = {
     userId,
@@ -172,7 +186,12 @@ export async function addToWatchList(
  * Updates an existing watchlist entry
  */
 export async function updateWatchListEntry(entryId: string, updates: Partial<WatchListEntry>): Promise<void> {
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return;
+  }
+
   const entryRef = doc(db, 'watchlist', entryId);
   await updateDoc(entryRef, {
     ...updates,
@@ -185,7 +204,11 @@ export async function updateWatchListEntry(entryId: string, updates: Partial<Wat
  */
 export async function getUserWatchList(userId: string): Promise<WatchListEntry[]> {
   if (!userId) return [];
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return [];
+  }
   const q = query(collection(db, 'watchlist'), where('userId', '==', userId));
   const querySnapshot = await getDocs(q);
 
@@ -200,7 +223,11 @@ export async function getUserWatchList(userId: string): Promise<WatchListEntry[]
  */
 export async function getWatchListEntry(userId: string, animeId: number): Promise<WatchListEntry | null> {
   if (!userId || !animeId) return null;
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return null;
+  }
   const q = query(
     collection(db, 'watchlist'),
     where('userId', '==', userId),
@@ -221,7 +248,12 @@ export async function getWatchListEntry(userId: string, animeId: number): Promis
  * Removes an anime from the user's watchlist
  */
 export async function removeFromWatchList(entryId: string): Promise<void> {
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return;
+  }
+
   await deleteDoc(doc(db, 'watchlist', entryId));
 }
 
@@ -229,7 +261,11 @@ export async function removeFromWatchList(entryId: string): Promise<void> {
  * Gets watchlist entries filtered by status
  */
 export async function getWatchListByStatus(userId: string, status: WatchStatus): Promise<WatchListEntry[]> {
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return [];
+  }
   const q = query(
     collection(db, 'watchlist'),
     where('userId', '==', userId),
@@ -317,7 +353,11 @@ export async function markEpisodeWatched(
   duration: number = 0
 ): Promise<void> {
   if (!userId || !animeId || !episodeNumber) return;
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return;
+  }
   const q = query(
     collection(db, 'episode_watches'),
     where('userId', '==', userId),
@@ -373,7 +413,11 @@ export async function markEpisodeWatched(
  */
 export async function unmarkEpisodeWatched(userId: string, animeId: number, episodeNumber: number): Promise<void> {
   if (!userId || !animeId || !episodeNumber) return;
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return;
+  }
   const q = query(
     collection(db, 'episode_watches'),
     where('userId', '==', userId),
@@ -417,7 +461,11 @@ export async function unmarkEpisodeWatched(userId: string, animeId: number, epis
  * Gets all watched episodes for an anime
  */
 export async function getWatchedEpisodes(userId: string, animeId: number): Promise<number[]> {
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return [];
+  }
   const q = query(
     collection(db, 'episode_watches'),
     where('userId', '==', userId),
@@ -439,7 +487,11 @@ export async function updateAnimeStatus(
   episodesWatched?: number,
   score?: number
 ): Promise<void> {
-  const db = getFirebaseDb();
+  const db = getDb();
+  if (!db) {
+    console.error('Database not available');
+    return;
+  }
 
   const updates: Partial<WatchListEntry> = {
     status,
@@ -461,7 +513,12 @@ export async function updateAnimeStatus(
  * Clears all watch history for an anime
  */
 export async function clearWatchHistory(userId: string, animeId: number): Promise<void> {
-  const db = getFirebaseDb();
+  const db = getDb();
+
+  if (!db) {
+    console.error('Database not available');
+    return;
+  }
 
   // Get all episode watch records
   const q = query(
@@ -502,7 +559,12 @@ export async function clearWatchHistory(userId: string, animeId: number): Promis
  * Gets total watch time for a user in minutes
  */
 export async function getTotalWatchTime(userId: string): Promise<number> {
-  const db = getFirebaseDb();
+  const db = getDb();
+
+  if (!db) {
+    console.error('Database not available');
+    return 0;
+  }
   const q = query(
     collection(db, 'episode_watches'),
     where('userId', '==', userId)
@@ -556,7 +618,21 @@ export interface MonthlyProgress {
  * Gets monthly watch progress for a user
  */
 export async function getMonthlyProgress(userId: string): Promise<MonthlyProgress> {
-  const db = getFirebaseDb();
+  const db = getDb();
+
+  if (!db) {
+    // Return default progress if database is not available
+    return {
+      month: new Date().toISOString().slice(0, 7),
+      episodesWatched: 0,
+      animeCompleted: 0,
+      animeStarted: 0,
+      percentComplete: 0,
+      episodesThisWeek: 0,
+      episodesThisMonth: 0,
+      monthlyGoal: 120,
+    };
+  }
 
   // Get all watchlist entries
   const watchlist = await getUserWatchList(userId);

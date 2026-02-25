@@ -71,41 +71,66 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
             setLoading(false);
         }, 10000); // 10 second timeout
 
-        const auth = getFirebaseAuth();
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            // Clear timeout on successful auth check
-            clearTimeout(authTimeout);
-
-            if (!currentUser && !isAuthPage) {
-                router.push("/login");
-            } else if (currentUser && isAuthPage) {
-                router.push("/");
-            } else {
-                setUser(currentUser);
-                // Fetch monthly progress
-                if (currentUser) {
-                    const progress = await getMonthlyProgress(currentUser.uid);
-                    setMonthlyProgress(progress);
+        try {
+            const auth = getFirebaseAuth();
+            if (!auth) {
+                console.warn('Firebase auth not available');
+                clearTimeout(authTimeout);
+                if (!isAuthPage) {
+                    router.push("/login");
+                } else {
+                    setLoading(false);
                 }
-                setLoading(false);
+                return;
             }
-        }, (error) => {
-            // Handle auth errors
-            console.error("Auth state change error:", error);
+
+            const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+                // Clear timeout on successful auth check
+                clearTimeout(authTimeout);
+
+                if (!currentUser && !isAuthPage) {
+                    router.push("/login");
+                } else if (currentUser && isAuthPage) {
+                    router.push("/");
+                } else {
+                    setUser(currentUser);
+                    // Fetch monthly progress
+                    if (currentUser) {
+                        try {
+                            const progress = await getMonthlyProgress(currentUser.uid);
+                            setMonthlyProgress(progress);
+                        } catch (error) {
+                            console.error('Error fetching monthly progress:', error);
+                        }
+                    }
+                    setLoading(false);
+                }
+            }, (error) => {
+                // Handle auth errors
+                console.error("Auth state change error:", error);
+                clearTimeout(authTimeout);
+                // If there's an auth error and we're not on a public page, redirect to login
+                // Otherwise, just proceed to allow the app to work
+                if (!isAuthPage) {
+                    router.push("/login");
+                } else {
+                    setLoading(false);
+                }
+            });
+
+            return () => {
+                clearTimeout(authTimeout);
+                unsubscribe();
+            };
+        } catch (error) {
+            console.error('Firebase auth initialization error:', error);
             clearTimeout(authTimeout);
-            // If there's an auth error and we're not on a public page, redirect to login
-            // Otherwise, just proceed to allow the app to work
             if (!isAuthPage) {
                 router.push("/login");
             } else {
                 setLoading(false);
             }
-        });
-
-        return () => {
-            clearTimeout(authTimeout);
-            unsubscribe();
-        };
+        }
     }, [pathname, router]);
 
     const handleSearch = (e?: React.KeyboardEvent<HTMLInputElement>) => {
