@@ -1,13 +1,37 @@
 {
-    "firestore": {
-        "rules": "firestore.rules"
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "nextjs"
+      }
+    ]
+  },
+  "functions": {
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "next",
+      "next/**"
+    ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
     },
-    "emulators": {
-        "auth": {
-            "port": 9099
-        },
-        "firestore": {
-            "port": 8080
-        }
+    "firestore": {
+      "port": 8080
     }
+  }
 }
