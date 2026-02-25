@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to validate watchlist entry data
+    function isValidWatchlistEntry() {
+      let data = request.resource.data;
+      return data.userId is string
+        && data.userId.size() > 0
+        && data.animeId != null
+        && data.animeTitle is string
+        && data.animeTitle.size() > 0
+        && data.animeImage is string
+        && data.status is string
+        && data.status in ['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch']
+        && data.episodesWatched != null
+        && data.totalEpisodes != null
+        && data.createdAt is string
+        && data.createdAt.size() > 0
+        && data.updatedAt is string
+        && data.updatedAt.size() > 0;
+    }
+    
+    // Helper function to validate episode watch record
+    function isValidEpisodeWatch() {
+      let data = request.resource.data;
+      return data.userId is string
+        && data.userId.size() > 0
+        && data.animeId != null
+        && data.episodeNumber != null
+        && data.watchedAt is string
+        && data.watchedAt.size() > 0
+        && data.duration != null;
+    }
+    
+    // Watchlist collection - users can only read/write their own entries
+    match /watchlist/{entryId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId
+        && isValidWatchlistEntry();
+      allow update: if request.auth != null 
+        && request.auth.uid == resource.data.userId
+        && isValidWatchlistEntry();
+      allow delete: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+    }
+    
+    // Episode watches collection - users can only read/write their own entries
+    match /episode_watches/{recordId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId
+        && isValidEpisodeWatch();
+      allow update, delete: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+    }
+    
+    // User profiles (if you create this collection)
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == userId;
+    }
+  }
+}

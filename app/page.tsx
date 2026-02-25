@@ -1,65 +1,88 @@
 import Image from "next/image";
+import Link from "next/link";
+import { getEnglishTitle, type JikanAnime } from "@/lib/anime";
+import TrendingSlider from "@/components/TrendingSlider";
+import HeroSlider from "@/components/HeroSlider";
 
-export default function Home() {
+type Anime = JikanAnime;
+
+export default async function Home() {
+  let heroAnimeList: Anime[] = [];
+  let topRated: Anime[] = [];
+  let newest: Anime[] = [];
+
+  try {
+    // Fetch top airing anime for hero slider
+    const res1 = await fetch(`https://api.jikan.moe/v4/top/anime?filter=airing&limit=5`, { cache: 'no-store' });
+    if (res1.ok) heroAnimeList = (await res1.json()).data || [];
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    // Fetch top rated anime
+    const res2 = await fetch(`https://api.jikan.moe/v4/top/anime?limit=10`, { cache: 'no-store' });
+    if (res2.ok) topRated = (await res2.json()).data || [];
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    // Fetch currently airing anime
+    const res3 = await fetch(`https://api.jikan.moe/v4/seasons/now?limit=10`, { cache: 'no-store' });
+    if (res3.ok) newest = (await res3.json()).data || [];
+  } catch (e) {
+    console.error("Failed to fetch from Jikan", e);
+  }
+
+  // Fallbacks using previous dummy images in case API is down
+  const defaultHeroImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuD8XXH9NYcgpMPRU8DR0Qm8CL3rRT4mSjvrQOh0co-kpoQicbGI9FgLxdwA9iIsYTNJhArw0W3IrjHdbl4ZkUgWarvIIEU6f9qD9unp6LhOrnSjYBwvShLqyitUnswnHzcdiiQCQe9glQHoRCpzrO1acFbn2mAQb8T_2j43T0ZcppahRH2iVwYpUm6zmERoEmN0o4eNx4uKMwMyJRzb3GjQgFGFDE7k6EUwp50OIXALL1-bj81avyNQbBGuIj9RZ2qdjVZyy0PqYA8U";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      {/* Hero Section with Animated Slider */}
+      <HeroSlider animeList={heroAnimeList} fallbackImage={defaultHeroImage} />
+
+      {/* Trending Anime Slider */}
+      <section className="space-y-6">
+        <div className="space-y-1">
+          <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">local_fire_department</span>
+            Trending Now
+          </h3>
+          <p className="text-slate-400 text-sm">The most popular anime right now.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <TrendingSlider anime={topRated} />
+      </section>
+
+      {/* Top Rated Grid */}
+      <section className="space-y-6">
+        <div className="flex justify-between items-end">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">stars</span>
+              Top Rated Titles
+            </h3>
+            <p className="text-slate-400 text-sm">The most critically acclaimed series.</p>
+          </div>
+          <Link className="text-primary text-sm font-bold hover:underline" href="/series">View All</Link>
         </div>
-      </main>
-    </div>
+
+        <TrendingSlider anime={topRated.slice(0, 5)} />
+      </section>
+
+      {/* Newest Episodes Grid */}
+      <section className="space-y-6 pb-12">
+        <div className="flex justify-between items-end">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-accent-cyan">update</span>
+              Currently Airing
+            </h3>
+            <p className="text-slate-400 text-sm">Freshly subbed and ready for your viewing pleasure.</p>
+          </div>
+          <Link className="text-accent-cyan text-sm font-bold hover:underline" href="/series">View All</Link>
+        </div>
+
+        <TrendingSlider anime={newest.slice(0, 5)} />
+      </section>
+    </>
   );
 }
