@@ -339,6 +339,33 @@ export async function markEpisodeWatched(
     duration,
     watchedAt: new Date().toISOString(),
   });
+
+  // Update the episodesWatched count in watchlist
+  const watchlistQ = query(
+    collection(db, 'watchlist'),
+    where('userId', '==', userId),
+    where('animeId', '==', animeId)
+  );
+  const watchlistSnapshot = await getDocs(watchlistQ);
+
+  if (!watchlistSnapshot.empty) {
+    const watchlistDoc = watchlistSnapshot.docs[0];
+    const currentData = watchlistDoc.data();
+
+    // Get all watched episodes to count them
+    const allEpisodesQ = query(
+      collection(db, 'episode_watches'),
+      where('userId', '==', userId),
+      where('animeId', '==', animeId)
+    );
+    const allEpisodesSnapshot = await getDocs(allEpisodesQ);
+    const episodesWatchedCount = allEpisodesSnapshot.size;
+
+    await updateDoc(doc(db, 'watchlist', watchlistDoc.id), {
+      episodesWatched: episodesWatchedCount,
+      updatedAt: new Date().toISOString()
+    });
+  }
 }
 
 /**
@@ -357,6 +384,32 @@ export async function unmarkEpisodeWatched(userId: string, animeId: number, epis
 
   if (!querySnapshot.empty) {
     await deleteDoc(doc(db, 'episode_watches', querySnapshot.docs[0].id));
+  }
+
+  // Update the episodesWatched count in watchlist
+  const watchlistQ = query(
+    collection(db, 'watchlist'),
+    where('userId', '==', userId),
+    where('animeId', '==', animeId)
+  );
+  const watchlistSnapshot = await getDocs(watchlistQ);
+
+  if (!watchlistSnapshot.empty) {
+    const watchlistDoc = watchlistSnapshot.docs[0];
+
+    // Get all watched episodes to count them
+    const allEpisodesQ = query(
+      collection(db, 'episode_watches'),
+      where('userId', '==', userId),
+      where('animeId', '==', animeId)
+    );
+    const allEpisodesSnapshot = await getDocs(allEpisodesQ);
+    const episodesWatchedCount = allEpisodesSnapshot.size;
+
+    await updateDoc(doc(db, 'watchlist', watchlistDoc.id), {
+      episodesWatched: episodesWatchedCount,
+      updatedAt: new Date().toISOString()
+    });
   }
 }
 
