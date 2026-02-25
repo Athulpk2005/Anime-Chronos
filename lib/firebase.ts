@@ -17,12 +17,18 @@ let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
 let googleProvider: GoogleAuthProvider | undefined;
-let initialized = false;
+let initAttempted = false;
 
 const initializeFirebase = () => {
-    if (initialized) return;
+    // If we already have auth, don't initialize again
+    if (auth && app && db) return;
 
-    // Check if config has values (handle empty strings too)
+    // Prevent infinite loops in production
+    if (initAttempted && process.env.NODE_ENV === 'production') return;
+
+    initAttempted = true;
+
+    // Check if config has values
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -34,12 +40,10 @@ const initializeFirebase = () => {
 
     if (!hasConfig) {
         console.error('Firebase config is empty. Environment variables may not be loaded in production.');
-        console.error('API Key set:', !!apiKey, apiKey ? 'value: ' + apiKey.substring(0, 10) + '...' : '');
-        console.error('Auth Domain set:', !!authDomain);
-        console.error('Project ID set:', !!projectId);
-        console.error('App ID set:', !!appId);
-        // Mark as initialized to prevent repeated attempts
-        initialized = true;
+        // In production, don't retry; in dev, allow retry
+        if (process.env.NODE_ENV !== 'production') {
+            initAttempted = false;
+        }
         return;
     }
 
@@ -48,12 +52,13 @@ const initializeFirebase = () => {
         auth = getAuth(app);
         db = getFirestore(app);
         googleProvider = new GoogleAuthProvider();
-        initialized = true;
         console.log('Firebase initialized successfully');
     } catch (error) {
         console.error('Firebase initialization error:', error);
-        // Mark as initialized to prevent repeated attempts even on error
-        initialized = true;
+        // In dev, allow retry
+        if (process.env.NODE_ENV !== 'production') {
+            initAttempted = false;
+        }
     }
 };
 
